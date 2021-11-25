@@ -20,7 +20,8 @@ enum layer_names {
     _BASE,
     _SHIFT,
     _CURSOR,
-    _CURSFT
+    _CURSFT,
+    _ADJUST
 };
 
 // Defines the keycodes used by our macros in process_record_user
@@ -44,7 +45,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
    * ,--------------------------------------------------.      ,--------------------------------------------------.
    */
   [_BASE] = LAYOUT(
-     S(KC_LBRC), KC_1   , KC_2  , KC_3          , KC_4    , KC_5   , G(C(KC_LEFT)),      G(C(KC_RGHT)), KC_6   , KC_7    , KC_8          , KC_9   , KC_0  ,KC_MINS   , \
+     S(KC_LBRC), KC_1   , KC_2  , KC_3          , KC_4    , KC_5   , G(C(KC_LEFT)),      G(C(KC_RGHT)) , KC_6   , KC_7    , KC_8          , KC_9   , KC_0  ,KC_MINS   , \
      KC_ESC    , KC_Q   , KC_W  , KC_E          , KC_R    , KC_T   , KC_F5        ,      KC_F2        , KC_Y   , KC_U    , KC_I          , KC_O   , KC_P  ,S(KC_MINS), \
      KC_TAB    , KC_A   , KC_S  , KC_D          , KC_F    , KC_G   , KC_F6        ,      KC_F10       , KC_H   , KC_J    , KC_K          , KC_L   ,KC_SCLN,S(KC_7)   , \
      KC_LCTL   , KC_Z   , KC_X  , KC_C          , KC_V    , KC_B   , KC_F8        ,      KC_F12       , KC_N   , KC_M    ,KC_COMM        , KC_DOT ,KC_SLSH,KC_JYEN   , \
@@ -79,7 +80,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
    * |------+------+------+------+------+------+------|      |------+------+------+------+------+------+------|
    * |TSK_VW|      |      |      |      |      |      |      |      | Left | Down |  Up  | Right|      |      |
    * |------+------+------+------+------+------+------|      |------+------+------+------+------+------+------|
-   * | C+A+D|      |      |      |      |      |      |      |      |   {  |   }  |   [  |   ]  |      |      |
+   * | C+A+D|      |      |      |      |      |      |      |      |   {  |   }  |   [  |   ]  |      |  LED |
    * |-------------+------+------+------+------+------|      |------+------+------+------+------+-------------|
    * ||||||||      |      |      |CURSFT|      |      |      |      | BSPC |CURSFT|      |      |      ||||||||
    * ,------------------------------------------------.      ,------------------------------------------------.
@@ -88,7 +89,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     KC_F11     , KC_F1  , KC_F2  , KC_F3  , KC_F4      , KC_F5,   RCS(KC_M),       KC_PSCR, KC_F6     , KC_F7      , KC_F8  , KC_F9  , KC_F10 , KC_F12 , \
     KC_SLEP    , _______, _______, _______, _______    , _______, _______  ,       _______, KC_HOME   , KC_PGDN    , KC_PGUP, KC_END , _______, _______, \
     G(KC_TAB)  , _______, _______, _______, _______    , _______, _______  ,       _______, KC_LEFT   , KC_DOWN    , KC_UP  , KC_RGHT, _______, _______, \
-    LCA(KC_DEL), _______, _______, _______, _______    , _______, _______  ,       _______, S(KC_RBRC), S(KC_BSLS) , KC_RBRC, KC_BSLS, _______, _______, \
+    LCA(KC_DEL), _______, _______, _______, _______    , _______, _______  ,       _______, S(KC_RBRC), S(KC_BSLS) , KC_RBRC, KC_BSLS, _______, RGB_TOG, \
                  _______, _______, _______, MO(_CURSFT), _______, _______  ,       _______, KC_BSPC   , MO(_CURSFT), _______, _______, _______           \
   ),
   /* Cursor Shift
@@ -167,3 +168,53 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     }
     return true;
 }
+
+
+void keyboard_post_init_user(void) {
+  // rgb lightの初期値を設定
+//  rgblight_sethsv_noeeprom(RGBLIGHT_DEFAULT_HUE, 255, RGBLIGHT_LIMIT_VAL);
+}
+/*
+void suspend_power_down_user(void) {
+    // code will run multiple times while keyboard is suspended
+}
+
+void suspend_wakeup_init_user(void) {
+    // code will run on keyboard wakeup
+}
+*/
+// called by each layer changes
+layer_state_t layer_state_set_user(layer_state_t state) {
+
+    switch (get_highest_layer(state)) {
+    case _SHIFT:
+        rgblight_sethsv_noeeprom((RGBLIGHT_DEFAULT_HUE -21) % 255 , 255, RGBLIGHT_LIMIT_VAL);
+        break;
+    case _CURSOR:
+        rgblight_sethsv_noeeprom((RGBLIGHT_DEFAULT_HUE + 21) % 255, 255, RGBLIGHT_LIMIT_VAL);
+        break;
+    case _CURSFT:
+        rgblight_sethsv_noeeprom((RGBLIGHT_DEFAULT_HUE + 42) % 255, 255, RGBLIGHT_LIMIT_VAL);
+        break;
+    case _ADJUST:
+        rgblight_sethsv_noeeprom((RGBLIGHT_DEFAULT_HUE + 116) % 255, 255, RGBLIGHT_LIMIT_VAL);
+        break;
+    default: //  他の全てのレイヤーあるいはデフォルトのレイヤー
+        rgblight_sethsv_noeeprom(RGBLIGHT_DEFAULT_HUE, 255, RGBLIGHT_LIMIT_VAL);
+        break;
+    }
+  return state;
+}
+
+
+/*
+void rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+    if (host_keyboard_led_state().caps_lock) {
+        for (uint8_t i = led_min; i <= led_max; i++) {
+            if (g_led_config.flags[i] & LED_FLAG_KEYLIGHT) {
+                rgb_matrix_set_color(i, RGB_RED);
+            }
+        }
+    }
+}
+*/
