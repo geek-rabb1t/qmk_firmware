@@ -4,7 +4,7 @@
 
 *A short description of the keyboard/project*
 
-* Keyboard Maintainer: [geek-rabb1t](https://github.com/geek-rabb1t)
+* Keyboard Maintainer: [geek-rabb1t](https://github.com/yourusername)
 * Hardware Supported: *The PCBs, controllers supported*
 * Hardware Availability: *Links to where you can find this hardware*
 
