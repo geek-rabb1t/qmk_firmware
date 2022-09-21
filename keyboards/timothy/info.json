@@ -1,11 +1,13 @@
 {
     "keyboard_name": "Timothy",
+    "manufacturer": "geek-rabb1t",
     "url": "",
     "maintainer": "geek-rabb1t",
+    "debounce": 5,
     "diode_direction": "COL2ROW",
     "matrix_pins": {
-        "rows": ["F6", "F7", "B1", "B3", "B2"],
-        "cols": ["D1", "D0", "D4", "C6", "D7", "E6", "B4"]
+        "rows": ["F7", "B1", "B3", "B2", "B6"],
+        "cols": ["D0", "D4", "C6", "D7", "E6", "B4", "B5"]
     },
     "layouts": {
         "LAYOUT": {

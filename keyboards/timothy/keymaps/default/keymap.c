@@ -125,8 +125,8 @@ layer_state_t layer_state_set_user(layer_state_t state) {
         rgb_matrix_sethsv_noeeprom((rgb_matrix_get_hue() + 116) % 255, rgb_matrix_get_sat(), rgb_matrix_get_val());
         break;
     default: //  他の全てのレイヤーあるいはデフォルトのレイヤー
-        // rgb_matrix_reload_from_eeprom();
-        rgb_matrix_sethsv_noeeprom(rgb_matrix_get_hue(), rgb_matrix_get_sat(), rgb_matrix_get_val());
+        rgb_matrix_reload_from_eeprom();
+        //rgb_matrix_sethsv_noeeprom(rgb_matrix_get_hue(), rgb_matrix_get_sat(), rgb_matrix_get_val());
         break;
     }
   return state;
