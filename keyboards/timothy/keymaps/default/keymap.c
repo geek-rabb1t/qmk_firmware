@@ -18,7 +18,8 @@
 // Defines names for use in layer keycodes and the keymap
 enum layer_names {
     _BASE,
-    _CURSOR,
+    _L1,
+    _L2,
     _ADJUST,
 };
 
@@ -47,7 +48,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      KC_ESC    , KC_Q   , KC_W  , KC_E          , KC_R    , KC_T   , KC_F5        ,      KC_F2        , KC_Y   , KC_U    , KC_I          , KC_O   , KC_P  ,KC_EQL, \
      KC_TAB    , KC_A   , KC_S  , KC_D          , KC_F    , KC_G   , KC_INS        ,      KC_F8       , KC_H   , KC_J    , KC_K          , KC_L   ,KC_SCLN,KC_QUOT   , \
      KC_LCTL   , KC_Z   , KC_X  , KC_C          , KC_V    , KC_B   , KC_DEL        ,      KC_F12       , KC_N   , KC_M    ,KC_COMM        , KC_DOT ,KC_SLSH,KC_BSLS   , \
-     DF(_ADJUST)  , KC_LGUI ,KC_LALT ,LSFT_T(KC_F13), KC_SPC , MO(_CURSOR)  ,      MO(_CURSOR)  , KC_ENT  ,RSFT_T(KC_F14), KC_LBRC,KC_RBRC  ,KC_SLEP           \
+     DF(_ADJUST)  , KC_LGUI ,KC_LALT ,LSFT_T(KC_F13), KC_SPC , MO(_L1)  ,      MO(_L2)  , KC_ENT  ,RSFT_T(KC_F14), KC_LBRC,KC_RBRC  ,KC_SLEP           \
   ),
 
   /* Cursor
@@ -63,13 +64,35 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
    * ||||||||      |      |      |CURSFT|      |      |      |      | BSPC |CURSFT|      |      |      ||||||||
    * ,------------------------------------------------.      ,------------------------------------------------.
    */
-  [_CURSOR] = LAYOUT(
+  [_L1] = LAYOUT(
     KC_F11     , KC_F1  , KC_F2  , KC_F3  , KC_F4      , KC_F5,   RCS(KC_M),       KC_PSCR, KC_F6     , KC_F7      , KC_F8  , KC_F9  , KC_F10 , KC_F12 , \
     KC_SLEP    , _______, _______, _______, _______    , _______, _______  ,       _______, KC_HOME   , KC_PGDN    , KC_PGUP, KC_END , _______, _______, \
     G(KC_TAB)  , _______, _______, _______, _______    , _______, _______  ,       _______, KC_LEFT   , KC_DOWN    , KC_UP  , KC_RGHT, _______, _______, \
     LCA(KC_DEL), _______, _______, _______, _______    , _______, _______  ,       _______, KC_LCBR   , KC_RCBR , KC_LBRC, KC_RBRC, _______, _______, \
                  _______, _______, _______, _______, _______, _______  ,       _______, KC_BSPC   , _______, _______, _______, _______           \
   ),
+
+    /* Cursor
+   * ,------------------------------------------------.      ,------------------------------------------------.
+   * |  F11 |  F1  |  F2  |  F3  |  F4  |  F5  | Mute |      | PSCR |  F6  |  F7  |  F8  |  F9  |  F10 |  F12 |
+   * |------+------+------+------+------+------+------|      |------+------+------+------+------+------+------|
+   * | SLEEP|      |      |      |      |      |      |      |      | Home | PgDw | PgUp |  End |      |      |
+   * |------+------+------+------+------+------+------|      |------+------+------+------+------+------+------|
+   * |TSK_VW|      |      |      |      |      |      |      |      | Left | Down |  Up  | Right|      |      |
+   * |------+------+------+------+------+------+------|      |------+------+------+------+------+------+------|
+   * | C+A+D|      |      |      |      |      |      |      |      |   {  |   }  |   [  |   ]  |      |  LED |
+   * |-------------+------+------+------+------+------|      |------+------+------+------+------+-------------|
+   * ||||||||      |      |      |CURSFT|      |      |      |      | BSPC |CURSFT|      |      |      ||||||||
+   * ,------------------------------------------------.      ,------------------------------------------------.
+   */
+  [_L2] = LAYOUT(
+    XXXXXXX     , XXXXXXX  , XXXXXXX  , XXXXXXX  , XXXXXXX      , XXXXXXX,   XXXXXXX,       XXXXXXX, XXXXXXX     , XXXXXXX      , XXXXXXX  , XXXXXXX  , XXXXXXX , XXXXXXX , \
+    XXXXXXX    , XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX    , XXXXXXX, XXXXXXX  ,       XXXXXXX, XXXXXXX   , XXXXXXX    , XXXXXXX, XXXXXXX , XXXXXXX, XXXXXXX, \
+    XXXXXXX  , XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX    , XXXXXXX, XXXXXXX  ,       XXXXXXX, XXXXXXX   , XXXXXXX    , XXXXXXX  , XXXXXXX, XXXXXXX, XXXXXXX, \
+    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX    , XXXXXXX, XXXXXXX  ,       XXXXXXX, XXXXXXX   , XXXXXXX , XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, \
+                 XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX  ,       XXXXXXX, XXXXXXX   , XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX           \
+  ),
+
   /* Setting
    * ,------------------------------------------------.      ,------------------------------------------------.
    * |      |      |      |      |      |      |RGB_TOG|     |EEP_RST|      |      |      |      |      |      |
@@ -84,11 +107,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
    * ,------------------------------------------------.      ,------------------------------------------------.
    */
   [_ADJUST] = LAYOUT(
-    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, RGB_TOG,       EEP_RST, XXXXXXX    , XXXXXXX    , XXXXXXX    , XXXXXXX    , XXXXXXX, XXXXXXX, \
+    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, RGB_TOG,       EE_CLR, XXXXXXX    , XXXXXXX    , XXXXXXX    , XXXXXXX    , XXXXXXX, XXXXXXX, \
     XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, RGB_M_P,       XXXXXXX, XXXXXXX ,XXXXXXX , XXXXXXX , XXXXXXX  , XXXXXXX, XXXXXXX, \
     XXXXXXX, XXXXXXX, RGB_HUI, RGB_SAI, RGB_VAI, RGB_MOD, XXXXXXX,       XXXXXXX, XXXXXXX , XXXXXXX , XXXXXXX   , XXXXXXX , XXXXXXX, XXXXXXX, \
     XXXXXXX, XXXXXXX, RGB_HUD, RGB_SAD, RGB_VAD,RGB_RMOD, XXXXXXX,       XXXXXXX, XXXXXXX    , XXXXXXX    , XXXXXXX    , XXXXXXX    , XXXXXXX, XXXXXXX, \
-             DF(_BASE)  , XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,       XXXXXXX, XXXXXXX    , XXXXXXX    , XXXXXXX    , XXXXXXX    , RESET            \
+             DF(_BASE)  , XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,       XXXXXXX, XXXXXXX    , XXXXXXX    , XXXXXXX    , XXXXXXX    , QK_RBT            \
   ),
 };
 
@@ -118,15 +141,17 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 
     switch (get_highest_layer(state)) {
 
-    case _CURSOR:
+    case _L1:
         rgb_matrix_sethsv_noeeprom((rgb_matrix_get_hue() + 21) % 255, rgb_matrix_get_sat(), rgb_matrix_get_val());
+        break;
+    case _L2:
+        rgb_matrix_sethsv_noeeprom((rgb_matrix_get_hue() + 234) % 255, rgb_matrix_get_sat(), rgb_matrix_get_val());
         break;
     case _ADJUST:
         rgb_matrix_sethsv_noeeprom((rgb_matrix_get_hue() + 116) % 255, rgb_matrix_get_sat(), rgb_matrix_get_val());
         break;
     default: //  他の全てのレイヤーあるいはデフォルトのレイヤー
         rgb_matrix_reload_from_eeprom();
-        //rgb_matrix_sethsv_noeeprom(rgb_matrix_get_hue(), rgb_matrix_get_sat(), rgb_matrix_get_val());
         break;
     }
   return state;

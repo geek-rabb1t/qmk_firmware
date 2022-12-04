@@ -19,13 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "config_common.h"
 
-/* USB Device descriptor parameter */
-#define VENDOR_ID    0xFEED
-#define PRODUCT_ID   0x0000
-#define DEVICE_VER   0x0001
-// #define MANUFACTURER geek-rabb1t
-#define PRODUCT      Timothy
-
 /* key matrix size */
 #define MATRIX_ROWS 10
 #define MATRIX_COLS 7
@@ -92,6 +85,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // RGB Matrix
 
 // #    define RGBLED_NUM 66
+#    define RGB_MATRIX_LED_COUNT 66
 #    define DRIVER_LED_TOTAL 66
 #    define RGB_MATRIX_KEYPRESSES
 //#    define SPLIT_TRANSPORT_MIRROR
