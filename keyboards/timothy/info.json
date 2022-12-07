@@ -4,7 +4,7 @@
     "url": "https://geek-rabb1t.booth.pm/items/4213539",
     "maintainer": "geek-rabb1t",
     "usb": {
-        "pid": "0x0000",
+        "pid": "0xABB1",
         "vid": "0xFEED",
         "device_version": "1.0.0"
     },
