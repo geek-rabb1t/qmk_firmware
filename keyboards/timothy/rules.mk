@@ -24,6 +24,6 @@ AUDIO_ENABLE = no           # Audio output
 SPLIT_KEYBOARD = yes       # Enables split keyboard support
 
 RGB_MATRIX_ENABLE = yes
-RGB_MATRIX_DRIVER = WS2812
+RGB_MATRIX_DRIVER = ws2812
 # WS2812_DRIVER = i2c
 
