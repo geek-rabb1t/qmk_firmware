@@ -40,7 +40,7 @@ When defining axes for your joystick, you must provide a definition array typica
 For instance, the below example configures two axes. The X axis is read from the `A4` pin. With the default axis resolution of 8 bits, the range of values between 900 and 575 are scaled to -127 through 0, and values 575 to 285 are scaled to 0 through 127. The Y axis is configured as a virtual axis, and its value is not read from any pin. Instead, the user must update the axis value programmatically.
 
 ```c
-joystick_config_t joystick_axes[JOYSTICK_AXES_COUNT] = {
+joystick_config_t joystick_axes[JOYSTICK_AXIS_COUNT] = {
     JOYSTICK_AXIS_IN(A4, 900, 575, 285),
     JOYSTICK_AXIS_VIRTUAL
 };
@@ -50,10 +50,6 @@ Axes can be configured using one of the following macros:
 
  * `JOYSTICK_AXIS_IN(input_pin, low, rest, high)`  
    The ADC samples the provided pin. `low`, `high` and `rest` correspond to the minimum, maximum, and resting (or centered) analog values of the axis, respectively.
- * `JOYSTICK_AXIS_IN_OUT(input_pin, output_pin, low, rest, high)`  
-   Same as `JOYSTICK_AXIS_IN()`, but the provided `output_pin` will be pulled high before `input_pin` is read.
- * `JOYSTICK_AXIS_IN_OUT_GROUND(input_pin, output_pin, ground_pin, low, rest, high)`  
-   Same as `JOYSTICK_AXIS_IN_OUT()`, but the provided `ground_pin` will be pulled low before reading from `input_pin`.
  * `JOYSTICK_AXIS_VIRTUAL`  
    No ADC reading is performed. The value should be provided by user code.
 
@@ -64,7 +60,7 @@ The `low` and `high` values can be swapped to effectively invert the axis.
 The following example adjusts two virtual axes (X and Y) based on keypad presses, with `KC_P0` as a precision modifier:
 
 ```c
-joystick_config_t joystick_axes[JOYSTICK_AXES_COUNT] = {
+joystick_config_t joystick_axes[JOYSTICK_AXIS_COUNT] = {
     JOYSTICK_AXIS_VIRTUAL, // x
     JOYSTICK_AXIS_VIRTUAL  // y
 };
@@ -160,12 +156,8 @@ Describes a single axis.
 
 #### Members :id=api-joystick-config-t-members
 
- - `pin_t output_pin`  
-   A pin to set as output high when reading the analog value, or `JS_VIRTUAL_AXIS`.
  - `pin_t input_pin`  
    The pin to read the analog value from, or `JS_VIRTUAL_AXIS`.
- - `pin_t ground_pin`  
-   A pin to set as output low when reading the analog value, or `JS_VIRTUAL_AXIS`.
  - `uint16_t min_digit`  
    The minimum analog value.
  - `uint16_t mid_digit`  
@@ -192,7 +184,7 @@ Set the state of a button, and flush the report.
 
 ---
 
-### `void register_joystick_button(uint8_t button)` :id=api-unregister-joystick-button
+### `void unregister_joystick_button(uint8_t button)` :id=api-unregister-joystick-button
 
 Reset the state of a button, and flush the report.
 
