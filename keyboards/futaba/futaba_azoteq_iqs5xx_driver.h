@@ -37,7 +37,9 @@ typedef struct {
 extern trackpad_event_t trackpad_event;
 
 const static int8_t FUTABA_SWIPE_THREADSHOLD_PIXEL = 10;
-const static int FUTABA_MAX_TAP_DURATION = 250;
+const static uint16_t FUTABA_MAX_TAP_DURATION = 250;
+const static uint16_t FUTABA_RETAP_WAITING_TIME = 200;
+const static uint16_t FUTABA_DRAG_TRANSITION_TIME = 300;
 
 // #define FUTABA_REVERSE_SCROLL_X
 #define FUTABA_REVERSE_SCROLL_Y

@@ -100,6 +100,10 @@ static gesture_mode_t gesture_mode = gesture_mode_none;
 static int16_t swipe_distance_x = 0;
 static int16_t swipe_distance_y = 0;
 static int16_t tap_duration = 0;
+static bool is_retap_wait = false;
+static bool is_drag = false;
+static pointing_device_buttons_t drag_button;
+static uint16_t tap_interval = 0;
 
 void reset_gesture_status(void) {
     max_fingers = 0;
@@ -118,20 +122,37 @@ report_mouse_t pointing_device_generate_report(azoteq_iqs5xx_base_data_t base_da
 
     // end gesture
     if (base_data.number_of_fingers == 0) {
+        if (is_retap_wait) {
+            if (timer_elapsed(tap_interval) <= FUTABA_RETAP_WAITING_TIME) {
+                temp_report.buttons = pointing_device_handle_buttons(temp_report.buttons, true, drag_button);
+            } else {
+                is_retap_wait = false;
+                is_drag = false;
+            }
+        }
 
         if (gesture_mode == gesture_mode_swipe) {
             if (max_fingers >= 3) {
                 dispatch_swipe_gesture(swipe_distance_x, swipe_distance_y, max_fingers);
+            } else {
+                if (is_drag) {
+                    tap_interval = timer_read();
+                    is_retap_wait = true;
+                    drag_button = (max_fingers == 2) ? POINTING_DEVICE_BUTTON2 : POINTING_DEVICE_BUTTON1;
+                    temp_report.buttons = pointing_device_handle_buttons(temp_report.buttons, true, drag_button);
+                }
             }
             reset_gesture_status();
         }
 
         if (gesture_mode == gesture_mode_tap) {
-            if (tap_duration <= FUTABA_MAX_TAP_DURATION) {
+            if (timer_elapsed(tap_duration) <= FUTABA_MAX_TAP_DURATION) {
+                pd_dprintf("multi-tap %d fingers:%d.\n", max_fingers, timer_elapsed(tap_duration));
                 if (max_fingers >= 3) {
                     dispatch_multi_tap(max_fingers);
-                } else if (max_fingers == 2) {
-                    temp_report.buttons = pointing_device_handle_buttons(temp_report.buttons, true, POINTING_DEVICE_BUTTON2);
+                } else {
+                    pointing_device_buttons_t button  = (max_fingers == 2) ? POINTING_DEVICE_BUTTON2 : POINTING_DEVICE_BUTTON1;
+                    temp_report.buttons = pointing_device_handle_buttons(temp_report.buttons, true, button);
                 }
             }
             reset_gesture_status();
@@ -141,11 +162,19 @@ report_mouse_t pointing_device_generate_report(azoteq_iqs5xx_base_data_t base_da
     max_fingers = calc_max_fingers(base_data.number_of_fingers, max_fingers);
 
     if (max_fingers > 0) {
+
+        // drag waiting timeout
+        if (is_retap_wait) {
+            is_retap_wait = false;
+            gesture_mode = gesture_mode_swipe;
+            is_drag = true;
+        }
+
         // start gesture
         if (gesture_mode == gesture_mode_none) {
             reset_gesture_status();
-            if (x == 0 && y == 0) {
-                tap_duration = 0;
+            if (x == 0 && y == 0 && !is_drag) {
+                tap_duration = timer_read();
                 gesture_mode = gesture_mode_tap;
             } else {
                 gesture_mode = gesture_mode_swipe;
@@ -156,7 +185,10 @@ report_mouse_t pointing_device_generate_report(azoteq_iqs5xx_base_data_t base_da
             // in gesture
             if (gesture_mode == gesture_mode_tap) {
                 if (x == 0 && y == 0) {
-                    tap_duration += base_data.previous_cycle_time;
+                    if (max_fingers <= 2 && timer_elapsed(tap_duration) > FUTABA_DRAG_TRANSITION_TIME) {
+                        is_drag = true;
+                        gesture_mode = gesture_mode_swipe;
+                    }
                 } else {
                     gesture_mode = gesture_mode_swipe;
                 }
@@ -166,6 +198,13 @@ report_mouse_t pointing_device_generate_report(azoteq_iqs5xx_base_data_t base_da
                 if (max_fingers > 2) {
                     swipe_distance_x += x;
                     swipe_distance_y += y;
+
+                } else if (is_drag) {
+                    pointing_device_buttons_t button = (max_fingers == 2) ? POINTING_DEVICE_BUTTON2 : POINTING_DEVICE_BUTTON1;
+                    temp_report.buttons = pointing_device_handle_buttons(temp_report.buttons, true, button);
+
+                    temp_report.x = CONSTRAIN_HID_XY(AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.x.h, base_data.x.l));
+                    temp_report.y = CONSTRAIN_HID_XY(AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.y.h, base_data.y.l));
 
                 // scroll
                 } else if (max_fingers  == 2) {
@@ -185,11 +224,6 @@ report_mouse_t pointing_device_generate_report(azoteq_iqs5xx_base_data_t base_da
                 }
             }
         }
-    }
-
-    if (base_data.gesture_events_0.single_tap || base_data.gesture_events_0.press_and_hold) {
-        pd_dprintf("IQS5XX - Single tap/hold.\n");
-        temp_report.buttons = pointing_device_handle_buttons(temp_report.buttons, true, POINTING_DEVICE_BUTTON1);
     }
 
     return temp_report;
