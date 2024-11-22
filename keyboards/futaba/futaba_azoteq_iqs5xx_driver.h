@@ -14,11 +14,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+typedef struct {
+    int x;
+    int y;
+    mouse_xy_report_t mouse_report_x;
+    mouse_xy_report_t mouse_report_y;
+    int touch_strength;
+    int num_of_fingers;
+} trackpad_base_data_t;
+
+
+typedef enum {
+    touch_state_none,
+    touch_state_touch,
+    touch_state_press,
+} touch_state_t;
+
+
 typedef enum {
     gesture_mode_none,
     gesture_mode_tap,
     gesture_mode_swipe,
 } gesture_mode_t;
+
+typedef enum {
+    trackpad_state_idle,
+    trackpad_state_touch,
+    trackpad_state_move,
+    trackpad_state_gesture,
+    trackpad_state_gesture_fire,
+    trackpad_state_press,
+    trackpad_state_wait,
+} trackpad_state_t;
 
 typedef enum  {
     trackpad_event_none = -1,
@@ -40,6 +67,12 @@ const static int8_t FUTABA_SWIPE_THREADSHOLD_PIXEL = 10;
 const static uint16_t FUTABA_MAX_TAP_DURATION = 250;
 const static uint16_t FUTABA_RETAP_WAITING_TIME = 200;
 const static uint16_t FUTABA_DRAG_TRANSITION_TIME = 300;
+ // 必ずpressになる閾値
+const static uint16_t FUTABA_TAP_STRENGTH_THREADSHOLD = 600;
+// 弱いタッチでもクリックにする時間の閾値
+const static uint16_t FUTABA_MAX_TAP_TIME = 200;
+// 移動速度の補正係数(数値が大きいほどゆっくり)
+const static int FUTABA_CURSOR_CORRECTION_FACTOR = 96;
 
 // #define FUTABA_REVERSE_SCROLL_X
 #define FUTABA_REVERSE_SCROLL_Y

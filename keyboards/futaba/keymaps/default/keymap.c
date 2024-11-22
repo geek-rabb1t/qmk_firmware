@@ -45,3 +45,11 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][2] = {
     [1] =   { ENCODER_CCW_CW(KC_LEFT, KC_RGHT) },
     [2] =   { ENCODER_CCW_CW(KC_KB_VOLUME_UP, KC_KB_VOLUME_DOWN) }
 };
+
+void keyboard_post_init_user(void) {
+    // Customise these values to desired behaviour
+    debug_enable = true;
+    //debug_matrix = true;
+    //debug_keyboard = true;
+    //debug_mouse = true;
+}
