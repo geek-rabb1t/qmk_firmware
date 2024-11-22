@@ -14,7 +14,7 @@
         "encoder": true
     },
     "matrix_pins": {
-        "cols": ["GP4", "GP1", "GP3", "GP7", "GP6", "GP5"],
+        "cols": ["GP4", "GP1", "GP0", "GP7", "GP6", "GP5"],
         "rows": ["GP10", "GP8", "GP9", "GP11", "GP26", "GP27", "GP28", "GP15", "GP29", null, null]
     },
     "processor": "RP2040",
