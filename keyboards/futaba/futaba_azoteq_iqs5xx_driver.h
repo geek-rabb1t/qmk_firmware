@@ -64,15 +64,11 @@ typedef struct {
 extern trackpad_event_t trackpad_event;
 
 const static int8_t FUTABA_SWIPE_THREADSHOLD_PIXEL = 10;
-const static uint16_t FUTABA_MAX_TAP_DURATION = 250;
 const static uint16_t FUTABA_RETAP_WAITING_TIME = 200;
-const static uint16_t FUTABA_DRAG_TRANSITION_TIME = 300;
- // 必ずpressになる閾値
-const static uint16_t FUTABA_TAP_STRENGTH_THREADSHOLD = 600;
-// 弱いタッチでもクリックにする時間の閾値
+ // 必ずpressにする閾値
+const static uint16_t FUTABA_TAP_STRENGTH_THREADSHOLD = 850;
+// 弱いタッチでもクリックにする時間の最大値
 const static uint16_t FUTABA_MAX_TAP_TIME = 200;
-// 移動速度の補正係数(数値が大きいほどゆっくり)
-const static int FUTABA_CURSOR_CORRECTION_FACTOR = 96;
 
 // #define FUTABA_REVERSE_SCROLL_X
 #define FUTABA_REVERSE_SCROLL_Y
