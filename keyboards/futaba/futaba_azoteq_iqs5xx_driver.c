@@ -254,17 +254,9 @@ trackpad_state_t update_current_state(trackpad_base_data_t trackpad_data, trackp
         max_fingers = calc_max_fingers(trackpad_data.num_of_fingers, max_fingers);
         if (touch_state == touch_state_none) {
             if (timer_elapsed(tap_timer) <= FUTABA_MAX_TAP_TIME) {
-                pd_dprintf("timer tapped");
                 return trackpad_state_press;
             }
             return trackpad_state_idle;
-        }
-
-        if (touch_state == touch_state_press) {
-            if (timer_elapsed(tap_timer) <= FUTABA_MAX_TAP_TIME) {
-                pd_dprintf("touch to press!!");
-                return trackpad_state_press;
-            }
         }
 
         if (trackpad_data.mouse_report_x != 0 || trackpad_data.mouse_report_y != 0) {
@@ -272,6 +264,13 @@ trackpad_state_t update_current_state(trackpad_base_data_t trackpad_data, trackp
                 return trackpad_state_gesture;
             }
             return trackpad_state_move;
+        }
+
+        if (touch_state == touch_state_press) {
+            if (timer_elapsed(tap_timer) <= FUTABA_MAX_TAP_TIME) {
+                pd_dprintf("touch to press!!:%d, timer:%d\n", trackpad_data.touch_strength, timer_elapsed(tap_timer));
+                return trackpad_state_press;
+            }
         }
     }
 
@@ -309,7 +308,7 @@ trackpad_state_t update_current_state(trackpad_base_data_t trackpad_data, trackp
 
     if (prev_state == trackpad_state_wait) {
         if (touch_state == touch_state_none) {
-            if (timer_elapsed(tap_interval) <= FUTABA_RETAP_WAITING_TIME) {
+            if (timer_elapsed(tap_interval) >= FUTABA_RETAP_WAITING_TIME) {
                 return trackpad_state_idle;
             }
         }
