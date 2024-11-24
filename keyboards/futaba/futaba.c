@@ -34,3 +34,7 @@ void matrix_scan_kb(void) {
 
     matrix_scan_user();
 }
+
+report_mouse_t pointing_device_task_kb(report_mouse_t mouse_report) {
+    return pointing_device_task_user(mouse_report);
+}
