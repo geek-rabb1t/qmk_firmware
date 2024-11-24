@@ -62,8 +62,8 @@ void pointing_device_driver_init(void) {
 };
 
 void dispatch_swipe_gesture(int16_t swipe_distance_x, int16_t swipe_distance_y, int8_t num_of_fingers) {
-    swipe_distance_x = abs(swipe_distance_x) >= FUTABA_SWIPE_THREADSHOLD_PIXEL ? swipe_distance_x : 0;
-    swipe_distance_y = abs(swipe_distance_y) >= FUTABA_SWIPE_THREADSHOLD_PIXEL ? swipe_distance_y : 0;
+    swipe_distance_x = abs(swipe_distance_x) >= FUTABA_SWIPE_THRESHOLD_PIXEL ? swipe_distance_x : 0;
+    swipe_distance_y = abs(swipe_distance_y) >= FUTABA_SWIPE_THRESHOLD_PIXEL ? swipe_distance_y : 0;
     if (swipe_distance_x == 0 && swipe_distance_y == 0) {
         reset_trackpad_event();
         return;
@@ -226,7 +226,7 @@ report_mouse_t (*find_strategy(trackpad_state_t state))(trackpad_base_data_t) {
 touch_state_t get_touch_state(trackpad_base_data_t trackpad_data) {
     if (trackpad_data.touch_strength == 0) {
         return touch_state_none;
-    } else if (trackpad_data.touch_strength >= FUTABA_TAP_STRENGTH_THREADSHOLD) {
+    } else if (trackpad_data.touch_strength >= FUTABA_TAP_STRENGTH_THRESHOLD) {
         return touch_state_press;
     }
     return touch_state_touch;
@@ -336,26 +336,17 @@ int calc_touch_strength(azoteq_iqs5xx_base_data_t base_data) {
             max = fingers[i];
         }
     }
-    // if (max != 0) {
-    //     pd_dprintf("touch strength: %d. fingers:%d(%d). \n", max, base_data.number_of_fingers, max_fingers);
-    // }
+
     return max;
 }
 
 
 mouse_xy_report_t correct_cursor(int delta, int prev, bool print) {
-    if (delta == 0) {
-        return 0;
-    }
 
     int avg = (delta + prev);
     // 0.5 - 2倍 の間で可変(後で1/10にするのでここでは10倍)
     int ratio = (fmin(abs(avg), 255)) * 15 / 255 + 5;
     int mov = avg * ratio / 20; // avg計算で 1/2 にしていない分と ratioの倍率を割る
-
-    // if (print && avg != 0) {
-    //     pd_dprintf("correct cursor - avg:%d, ratio:%d, mov:%d\n", avg, ratio, (mouse_xy_report_t)CONSTRAIN_HID_XY(mov));
-    // }
 
     return (mouse_xy_report_t) CONSTRAIN_HID_XY((int)mov);
 
@@ -368,6 +359,7 @@ report_mouse_t pointing_device_generate_report(azoteq_iqs5xx_base_data_t base_da
 
     int x = AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.x.h, base_data.x.l);
     int y = AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.y.h, base_data.y.l);
+
     trackpad_base_data_t trackpad_data = {
         .x              = x,
         .y              = y,
