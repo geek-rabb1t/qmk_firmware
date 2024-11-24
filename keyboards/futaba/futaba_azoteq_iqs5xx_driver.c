@@ -133,17 +133,16 @@ report_mouse_t move_strategy(trackpad_base_data_t trackpad_data) {
     // pd_dprintf("move: %d fingers.\n",trackpad_data.num_of_fingers);
     report_mouse_t temp_report = {0};
     if (trackpad_data.num_of_fingers  >= 2) {
-        pd_dprintf("two fingers.\n");
-        #ifdef FUTABA_REVERSE_SCROLL_X
-            temp_report.h = CONSTRAIN_HID(trackpad_data.x) * -1;
-        #else
-            temp_report.h = CONSTRAIN_HID(trackpad_data.x);
-        #endif
-        #ifdef FUTABA_REVERSE_SCROLL_Y
-            temp_report.v = CONSTRAIN_HID(trackpad_data.y) * -1;
-        #else
-            temp_report.v = CONSTRAIN_HID(trackpad_data.y);
-        #endif
+
+        int scroll_dir_x = (FUTABA_REVERSE_SCROLL_X) ? -1 : 1;
+        int scroll_dir_y = (FUTABA_REVERSE_SCROLL_Y) ? -1 : 1;
+
+        int scroll_x = trackpad_data.x * SCROLL_SCALE_PERCENT / 100 * scroll_dir_x;
+        int scroll_y= trackpad_data.y * SCROLL_SCALE_PERCENT / 100 * scroll_dir_y;
+
+        temp_report.h = CONSTRAIN_HID(scroll_x);
+        temp_report.v = CONSTRAIN_HID(scroll_y);
+
 
     } else {
         temp_report.x = trackpad_data.mouse_report_x;

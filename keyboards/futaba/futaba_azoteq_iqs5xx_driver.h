@@ -70,7 +70,9 @@ const static uint16_t FUTABA_TAP_STRENGTH_THRESHOLD = 850;
 // 弱いタッチでもクリックにする時間の最大値
 const static uint16_t FUTABA_MAX_TAP_TIME = 200;
 
-// #define FUTABA_REVERSE_SCROLL_X
-#define FUTABA_REVERSE_SCROLL_Y
+#define SCROLL_SCALE_PERCENT 10
+
+#define FUTABA_REVERSE_SCROLL_X false
+#define FUTABA_REVERSE_SCROLL_Y true
 
 void reset_trackpad_event(void);
