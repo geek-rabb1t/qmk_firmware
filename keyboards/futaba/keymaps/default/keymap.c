@@ -6,7 +6,8 @@
 
 
 enum my_keycodes {
-  MOUSE_BOOST = SAFE_RANGE,
+  HIGH_SPEED = SAFE_RANGE,
+  LOW_SPEED
 };
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -25,7 +26,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_ESC , KC_Q,    KC_W,    KC_E,            KC_R,           KC_T, KC_DEL,  KC_F5,   KC_F2,   KC_Y,    KC_U,           KC_I,             KC_O,    KC_P,    KC_MINS,
         KC_TAB , KC_A,    KC_S,    KC_D,            KC_F,           KC_G,                            KC_H,    KC_J,           KC_K,             KC_L,    KC_SCLN, KC_QUOT,
         KC_LCTL, KC_Z,    KC_X,    KC_C,            KC_V,           KC_B,                            KC_N,    KC_M,           KC_COMM,          KC_DOT,  KC_SLSH, KC_BSLS,
-                 KC_LGUI, KC_LALT, LSFT_T(KC_LNG2), LT(2, KC_SPC),  MO(1),         MOUSE_BOOST,      MO(1),   LT(2, KC_ENT),  RSFT_T(KC_LNG1),  KC_LBRC, KC_RBRC
+                 KC_LGUI, KC_LALT, LSFT_T(KC_LNG2), LT(2, KC_SPC),  MO(1),         LOW_SPEED,      MO(1),   LT(2, KC_ENT),  RSFT_T(KC_LNG1),  KC_LBRC, KC_RBRC
                , KC_BTN3, G(KC_TAB), KC_BTN5, G(KC_D), KC_BTN4, KC_BTN3, G(KC_TAB), G(C(KC_RGHT)), G(KC_D), G(C(KC_LEFT))
     ),
 
@@ -59,14 +60,28 @@ void keyboard_post_init_user(void) {
     //debug_mouse = true;
 }
 
-static bool is_boost_mode = false;
+typedef enum  {
+    SPEED_MODE_LOW,
+    SPEED_MODE_NORMAL,
+    SPEED_MODE_HIGH
+} speed_mode_t;
+static speed_mode_t speed_mode = SPEED_MODE_NORMAL;
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
   switch (keycode) {
-    case MOUSE_BOOST:
+    case HIGH_SPEED:
       if (record->event.pressed) {
-        is_boost_mode = true;
+        speed_mode = SPEED_MODE_HIGH;
       } else {
-        is_boost_mode = false;
+        speed_mode = SPEED_MODE_NORMAL;
+      }
+      return true;
+
+    case LOW_SPEED:
+      if (record->event.pressed) {
+        speed_mode = SPEED_MODE_LOW;
+      } else {
+        speed_mode = SPEED_MODE_NORMAL;
       }
       return true;
     default:
@@ -74,14 +89,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
   }
 }
 
-int BOOST_RATIO = 2;
+int LOW_SPEED_RATIO = 2;
+int HIGH_SPEED_RATIO = 2;
 #define CONSTRAIN_HID_XY(amt) ((amt) < XY_REPORT_MIN ? XY_REPORT_MIN : ((amt) > XY_REPORT_MAX ? XY_REPORT_MAX : (amt)))
 
 report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
 
-    if (is_boost_mode) {
-        mouse_report.x = CONSTRAIN_HID_XY(mouse_report.x * BOOST_RATIO);
-        mouse_report.y = CONSTRAIN_HID_XY(mouse_report.y * BOOST_RATIO);
+    if (speed_mode == SPEED_MODE_LOW) {
+        mouse_report.x = CONSTRAIN_HID_XY(mouse_report.x / LOW_SPEED_RATIO);
+        mouse_report.y = CONSTRAIN_HID_XY(mouse_report.y / LOW_SPEED_RATIO);
+    }
+
+    if (speed_mode == SPEED_MODE_HIGH) {
+        mouse_report.x = CONSTRAIN_HID_XY(mouse_report.x * HIGH_SPEED_RATIO);
+        mouse_report.y = CONSTRAIN_HID_XY(mouse_report.y * HIGH_SPEED_RATIO);
     }
 
     return mouse_report;
