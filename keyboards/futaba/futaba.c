@@ -16,7 +16,7 @@
 
 #include "quantum.h"
 #include "wait.h"
-#include "futaba_azoteq_iqs5xx_driver.h"
+#include "gr_trackpad65_driver.h"
 
 const static int THREE_FINGER_GESTURE_ROW = 9;
 const static int FOUR_FINGER_GESTURE_ROW =  10;

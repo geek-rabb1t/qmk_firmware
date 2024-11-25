@@ -30,13 +30,6 @@ typedef enum {
     touch_state_press,
 } touch_state_t;
 
-
-typedef enum {
-    gesture_mode_none,
-    gesture_mode_tap,
-    gesture_mode_swipe,
-} gesture_mode_t;
-
 typedef enum {
     trackpad_state_idle,
     trackpad_state_touch,

@@ -25,7 +25,7 @@
 #include "debug.h"
 #include "wait.h"
 #include "timer.h"
-#include "futaba_azoteq_iqs5xx_driver.h"
+#include "gr_trackpad65_driver.h"
 #include <math.h>
 
 #define CONSTRAIN_HID(amt) ((amt) < INT8_MIN ? INT8_MIN : ((amt) > INT8_MAX ? INT8_MAX : (amt)))
