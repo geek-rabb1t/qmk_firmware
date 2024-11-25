@@ -138,7 +138,7 @@ report_mouse_t move_strategy(trackpad_base_data_t trackpad_data) {
         int scroll_dir_y = (FUTABA_REVERSE_SCROLL_Y) ? -1 : 1;
 
         int scroll_x = trackpad_data.x * SCROLL_SCALE_PERCENT / 100 * scroll_dir_x;
-        int scroll_y= trackpad_data.y * SCROLL_SCALE_PERCENT / 100 * scroll_dir_y;
+        int scroll_y = trackpad_data.y * SCROLL_SCALE_PERCENT / 100 * scroll_dir_y;
 
         temp_report.h = CONSTRAIN_HID(scroll_x);
         temp_report.v = CONSTRAIN_HID(scroll_y);
@@ -321,7 +321,7 @@ trackpad_state_t update_current_state(trackpad_base_data_t trackpad_data, trackp
     return prev_state;
 }
 
-int calc_touch_strength(azoteq_iqs5xx_base_data_t base_data) {
+int get_touch_strength(azoteq_iqs5xx_base_data_t base_data) {
     int fingers[5] = {
         AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_1.touch_strength.h, base_data.finger_1.touch_strength.l),
         AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_2.touch_strength.h, base_data.finger_2.touch_strength.l),
@@ -330,25 +330,112 @@ int calc_touch_strength(azoteq_iqs5xx_base_data_t base_data) {
         AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_5.touch_strength.h, base_data.finger_5.touch_strength.l)
     };
     int max = 0;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < base_data.number_of_fingers; i++) {
         if (fingers[i] > max) {
             max = fingers[i];
         }
     }
-
     return max;
 }
 
+typedef struct {
+    int x;
+    int y;
+} position_t;
+
+static position_t prev_positions[5] = {{-1, -1}, {-1, -1}, {-1, -1}, {-1, -1}, {-1, -1}};
+static int cursor_finger_num = 0;
+static uint16_t timer;
+// 指が 0本から 1本以上に変わった場合、一定サイクルは座標の変更を無視したほうがよさそう。
+void get_finger_delta(azoteq_iqs5xx_base_data_t base_data, position_t *delta) {
+    position_t fingers[5] = {
+        {
+            AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_1.absolute_x.h, base_data.finger_1.absolute_x.l),
+            AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_1.absolute_y.h, base_data.finger_1.absolute_y.l),
+        },
+        {
+            AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_2.absolute_x.h, base_data.finger_2.absolute_x.l),
+            AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_2.absolute_y.h, base_data.finger_2.absolute_y.l),
+        },
+        {
+            AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_3.absolute_x.h, base_data.finger_3.absolute_x.l),
+            AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_3.absolute_y.h, base_data.finger_3.absolute_y.l),
+        },
+        {
+            AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_4.absolute_x.h, base_data.finger_4.absolute_x.l),
+            AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_4.absolute_y.h, base_data.finger_4.absolute_y.l),
+        },
+        {
+            AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_5.absolute_x.h, base_data.finger_5.absolute_x.l),
+            AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_5.absolute_y.h, base_data.finger_5.absolute_y.l),
+        },
+    };
+
+    position_t deltas[5] = {0};
+    for (int i = 0; i < 5; i++) {
+        if (i >= base_data.number_of_fingers) {
+            fingers[i].x = -1;
+            fingers[i].y = -1;
+            prev_positions[i].x = -1;
+            prev_positions[i].y = -1;
+            continue;
+        }
+
+        if (i == 0 && prev_positions[i].x == -1) {
+            timer = timer_read();
+        }
+
+        if (prev_positions[i].x != -1) {
+            // カーソル飛び対策として、最大移動量を抑制
+            int x = fingers[i].x - prev_positions[i].x;
+            x = x > 300 ? 300 : x < -300 ? -300 : x;
+            deltas[i].x = x;
+
+            int y = fingers[i].y - prev_positions[i].y;
+            y = y > 300 ? 300 : y < -300 ? -300 : y;
+            deltas[i].y = y;
+        }
+
+        prev_positions[i].x = fingers[i].x;
+        prev_positions[i].y = fingers[i].y;
+    }
+
+    if (timer_elapsed(timer) < 100) {
+        delta->x = 0;
+        delta->y = 0;
+        return;
+    }
+
+    if (abs(deltas[cursor_finger_num].x) + abs(deltas[cursor_finger_num].y) > 2) {
+        delta->x = deltas[cursor_finger_num].x;
+        delta->y = deltas[cursor_finger_num].y;
+        return;
+    }
+
+    for (int i = 0; i < base_data.number_of_fingers; i++) {
+        if (abs(deltas[i].x) + abs(deltas[i].y) > 2) {
+            delta->x = deltas[i].x;
+            delta->x = deltas[i].y;
+            cursor_finger_num = i;
+            return;
+        }
+    }
+
+    delta->x = 0;
+    delta->y = 0;
+    cursor_finger_num = 0;
+
+    return;
+}
 
 mouse_xy_report_t correct_cursor(int delta, int prev, bool print) {
 
     int avg = (delta + prev);
-    // 0.5 - 2倍 の間で可変(後で1/10にするのでここでは10倍)
+    // 0.5 - 2倍 の間で可変
     int ratio = (fmin(abs(avg), 255)) * 15 / 255 + 5;
-    int mov = avg * ratio / 20; // avg計算で 1/2 にしていない分と ratioの倍率を割る
+    int mov = avg * ratio / 20;
 
     return (mouse_xy_report_t) CONSTRAIN_HID_XY((int)mov);
-
 }
 
 static int prev_x = 0;
@@ -356,20 +443,28 @@ static int prev_y = 0;
 
 report_mouse_t pointing_device_generate_report(azoteq_iqs5xx_base_data_t base_data) {
 
+    position_t position = {0};
+    get_finger_delta(base_data, &position);
+
     int x = AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.x.h, base_data.x.l);
     int y = AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.y.h, base_data.y.l);
 
+    if (position.x != x || position.y != y || position.x >= 200) {
+        pd_dprintf("cursor - delta: (%d, %d), relative: (%d, %d) \n", position.x, position.y, x, y);
+    }
+
+
     trackpad_base_data_t trackpad_data = {
-        .x              = x,
-        .y              = y,
-        .mouse_report_x = correct_cursor(x, prev_x, true),
-        .mouse_report_y = correct_cursor(y, prev_y, false),
-        .touch_strength = calc_touch_strength(base_data),
+        .x              = position.x,
+        .y              = position.y,
+        .mouse_report_x = correct_cursor(position.x, prev_x, true),
+        .mouse_report_y = correct_cursor(position.y, prev_y, false),
+        .touch_strength = get_touch_strength(base_data),
         .num_of_fingers = base_data.number_of_fingers,
     };
 
-    prev_x = x;
-    prev_y = y;
+    prev_x = position.x;
+    prev_y = position.y;
 
     trackpad_state = update_current_state(trackpad_data, trackpad_state);
     // pd_dprintf("state: %d.\n",trackpad_state);
