@@ -97,6 +97,7 @@ static bool doubleTap = false;
 
 static trackpad_state_t trackpad_state = trackpad_state_idle;
 static scroll_direction_t scroll_direction = scroll_direction_tbd;
+static position_t scroll_rest = {0};
 
 void reset_gesture_status(void) {
     if (max_fingers != 0) {
@@ -108,6 +109,8 @@ void reset_gesture_status(void) {
     swipe_distance_y = 0;
     doubleTap = false;
     scroll_direction = scroll_direction_tbd;
+    scroll_rest.x = 0;
+    scroll_rest.y = 0;
 }
 
 
@@ -122,6 +125,7 @@ report_mouse_t touch_strategy(trackpad_base_data_t *trackpad_data) {
     return temp_report;
 }
 
+
 report_mouse_t move_strategy(trackpad_base_data_t *trackpad_data) {
     report_mouse_t temp_report = {0};
     if (trackpad_data->num_of_fingers  >= 2) {
@@ -129,8 +133,12 @@ report_mouse_t move_strategy(trackpad_base_data_t *trackpad_data) {
         int scroll_dir_x = (FUTABA_REVERSE_SCROLL_X) ? -1 : 1;
         int scroll_dir_y = (FUTABA_REVERSE_SCROLL_Y) ? -1 : 1;
 
-        int scroll_x = trackpad_data->pos.x * SCROLL_SCALE_PERCENT / 100 * scroll_dir_x;
-        int scroll_y = trackpad_data->pos.y * SCROLL_SCALE_PERCENT / 100 * scroll_dir_y;
+        scroll_rest.x += trackpad_data->pos.x * SCROLL_SCALE_PERCENT;
+        scroll_rest.y += trackpad_data->pos.y * SCROLL_SCALE_PERCENT;
+        int scroll_x = scroll_rest.x / 100;
+        int scroll_y = scroll_rest.y / 100;
+        scroll_rest.x -= scroll_x * 100;
+        scroll_rest.y -= scroll_y * 100;
 
         // Restrict scroll direction.
         if (scroll_direction == scroll_direction_tbd) {
@@ -161,10 +169,10 @@ report_mouse_t move_strategy(trackpad_base_data_t *trackpad_data) {
         }
 
         if (scroll_direction == scroll_direction_vertical || scroll_direction == scroll_direction_both) {
-            temp_report.v = CONSTRAIN_HID(scroll_y);
+            temp_report.v = CONSTRAIN_HID(scroll_y * scroll_dir_y);
         }
         if (scroll_direction == scroll_direction_horizontal || scroll_direction == scroll_direction_both) {
-            temp_report.h = CONSTRAIN_HID(scroll_x);
+            temp_report.h = CONSTRAIN_HID(scroll_x * scroll_dir_x);
         }
 
 

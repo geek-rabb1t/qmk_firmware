@@ -83,7 +83,7 @@ const static uint16_t FUTABA_MAX_TAP_TIME = 200;
 
 const static int WAIT_TIME_FOR_CURSOR_MOVEMENT = 100;
 
-#define SCROLL_SCALE_PERCENT 10
+#define SCROLL_SCALE_PERCENT 5
 
 #define FUTABA_REVERSE_SCROLL_X false
 #define FUTABA_REVERSE_SCROLL_Y true
