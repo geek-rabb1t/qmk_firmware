@@ -95,8 +95,8 @@ static uint16_t tap_interval = 0;
 static uint16_t tap_timer = 0;
 static bool doubleTap = false;
 
-
 static trackpad_state_t trackpad_state = trackpad_state_idle;
+static scroll_direction_t scroll_direction = scroll_direction_tbd;
 
 void reset_gesture_status(void) {
     if (max_fingers != 0) {
@@ -107,6 +107,7 @@ void reset_gesture_status(void) {
     swipe_distance_x = 0;
     swipe_distance_y = 0;
     doubleTap = false;
+    scroll_direction = scroll_direction_tbd;
 }
 
 
@@ -122,7 +123,6 @@ report_mouse_t touch_strategy(trackpad_base_data_t *trackpad_data) {
 }
 
 report_mouse_t move_strategy(trackpad_base_data_t *trackpad_data) {
-    // pd_dprintf("move: %d fingers.\n",trackpad_data.num_of_fingers);
     report_mouse_t temp_report = {0};
     if (trackpad_data->num_of_fingers  >= 2) {
 
@@ -132,16 +132,44 @@ report_mouse_t move_strategy(trackpad_base_data_t *trackpad_data) {
         int scroll_x = trackpad_data->pos.x * SCROLL_SCALE_PERCENT / 100 * scroll_dir_x;
         int scroll_y = trackpad_data->pos.y * SCROLL_SCALE_PERCENT / 100 * scroll_dir_y;
 
-        if (abs(trackpad_data->pos.y + trackpad_data->prev_pos.y) > abs(trackpad_data->pos.x + trackpad_data->prev_pos.x) * 2) {
-            temp_report.v = CONSTRAIN_HID(scroll_y);
-        } else if (abs(trackpad_data->pos.x  + trackpad_data->prev_pos.x) > abs(trackpad_data->pos.y  + trackpad_data->prev_pos.y) *2) {
-            temp_report.h = CONSTRAIN_HID(scroll_x);
-        } else {
-            temp_report.h = CONSTRAIN_HID(scroll_x);
-            temp_report.v = CONSTRAIN_HID(scroll_y);
+        // Restrict scroll direction.
+        if (scroll_direction == scroll_direction_tbd) {
+            if (scroll_x == 0 && scroll_y == 0) {
+                return temp_report;
+            }
+            if (abs(scroll_y) > abs(scroll_x) * 2) {
+                scroll_direction = scroll_direction_vertical;
+            } else if (abs(scroll_x) > abs(scroll_y) *2) {
+                scroll_direction = scroll_direction_horizontal;
+            } else {
+                scroll_direction = scroll_direction_both;
+            }
+
+            return temp_report;
         }
 
+        // Remove restrictions on scroll direction.
+        if (abs(trackpad_data->pos.y) > abs(trackpad_data->pos.x) * 2  && abs(trackpad_data->prev_pos.y) > abs(trackpad_data->prev_pos.x) * 2) {
+            if (scroll_direction == scroll_direction_horizontal) {
+                scroll_direction = scroll_direction_both;
+            }
+
+        } else if (abs(trackpad_data->pos.x) > abs(trackpad_data->pos.y) * 2  && abs(trackpad_data->prev_pos.x) > abs(trackpad_data->prev_pos.y) * 2) {
+            if (scroll_direction == scroll_direction_vertical) {
+                scroll_direction = scroll_direction_both;
+            }
+        }
+
+        if (scroll_direction == scroll_direction_vertical || scroll_direction == scroll_direction_both) {
+            temp_report.v = CONSTRAIN_HID(scroll_y);
+        }
+        if (scroll_direction == scroll_direction_horizontal || scroll_direction == scroll_direction_both) {
+            temp_report.h = CONSTRAIN_HID(scroll_x);
+        }
+
+
     } else {
+        scroll_direction = scroll_direction_tbd;
         temp_report.x = trackpad_data->mouse_report_x;
         temp_report.y = trackpad_data->mouse_report_y;
     }
@@ -264,7 +292,6 @@ trackpad_state_t update_current_state(trackpad_base_data_t *trackpad_data, track
 
         if (touch_state == touch_state_press) {
             if (timer_elapsed(tap_timer) <= FUTABA_MAX_TAP_TIME) {
-                pd_dprintf("touch to press!!:%d, timer:%d\n", trackpad_data->touch_strength, timer_elapsed(tap_timer));
                 return trackpad_state_press;
             }
         }
@@ -382,7 +409,7 @@ void get_finger_delta(azoteq_iqs5xx_base_data_t base_data, position_t *delta) {
 
         if (prev_positions[i].x != -1) {
             first_touch = false;
-            // カーソル飛び対策として、最大移動量を抑制
+            // Limit the maximum movement.
             int x = fingers[i].x - prev_positions[i].x;
             x = x > 300 ? 300 : x < -300 ? -300 : x;
             deltas[i].x = x;
@@ -398,7 +425,6 @@ void get_finger_delta(azoteq_iqs5xx_base_data_t base_data, position_t *delta) {
 
     if (base_data.number_of_fingers > 0 && first_touch) {
         timer = timer_read();
-        pd_dprintf("first touch");
     }
 
     if (timer_elapsed(timer) < WAIT_TIME_FOR_CURSOR_MOVEMENT) {
@@ -432,7 +458,6 @@ void get_finger_delta(azoteq_iqs5xx_base_data_t base_data, position_t *delta) {
 mouse_xy_report_t correct_cursor(int delta, int prev, bool print) {
 
     int avg = (delta + prev);
-    // 0.5 - 2倍 の間で可変
     int ratio = (fmin(abs(avg), 255)) * 15 / 255 + 5;
     int mov = avg * ratio / 20;
 
@@ -445,14 +470,6 @@ report_mouse_t pointing_device_generate_report(azoteq_iqs5xx_base_data_t base_da
 
     position_t position = {0};
     get_finger_delta(base_data, &position);
-
-    int x = AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.x.h, base_data.x.l);
-    int y = AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.y.h, base_data.y.l);
-
-    if (position.x != x || position.y != y || position.x >= 200) {
-        pd_dprintf("cursor - delta: (%d, %d), relative: (%d, %d) \n", position.x, position.y, x, y);
-    }
-
 
     trackpad_base_data_t trackpad_data = {
         .pos.x = position.x,
@@ -495,7 +512,6 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
                 read_error_count++;
             }
             temp_report.buttons = previous_button_state;
-            // pd_dprintf("IQS5XX - get report failed: %d \n", status);
         }
     } else {
         pd_dprintf("IQS5XX - Init failed: %d \n", azoteq_iqs5xx_init_status);

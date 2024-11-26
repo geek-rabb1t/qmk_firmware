@@ -25,6 +25,12 @@ typedef struct {
     int strength;
 } position_with_strength_t;
 
+typedef enum {
+    scroll_direction_vertical,
+    scroll_direction_horizontal,
+    scroll_direction_both,
+    scroll_direction_tbd,
+} scroll_direction_t;
 
 typedef struct {
     position_t pos;
