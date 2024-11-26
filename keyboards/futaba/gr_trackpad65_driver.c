@@ -327,7 +327,7 @@ int get_touch_strength(azoteq_iqs5xx_base_data_t base_data) {
         AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_5.touch_strength.h, base_data.finger_5.touch_strength.l)
     };
     int max = 0;
-    for (int i = 0; i < base_data.number_of_fingers; i++) {
+    for (int i = 0; i < 5; i++) {
         if (fingers[i] > max) {
             max = fingers[i];
         }
@@ -341,32 +341,38 @@ static int cursor_finger_num = 0;
 static uint16_t timer;
 // 指が 0本から 1本以上に変わった場合、一定サイクルは座標の変更を無視したほうがよさそう。
 void get_finger_delta(azoteq_iqs5xx_base_data_t base_data, position_t *delta) {
-    position_t fingers[5] = {
+    position_with_strength_t fingers[5] = {
         {
             AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_1.absolute_x.h, base_data.finger_1.absolute_x.l),
             AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_1.absolute_y.h, base_data.finger_1.absolute_y.l),
+            AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_1.touch_strength.h, base_data.finger_1.touch_strength.l),
         },
         {
             AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_2.absolute_x.h, base_data.finger_2.absolute_x.l),
             AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_2.absolute_y.h, base_data.finger_2.absolute_y.l),
+            AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_2.touch_strength.h, base_data.finger_2.touch_strength.l),
         },
         {
             AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_3.absolute_x.h, base_data.finger_3.absolute_x.l),
             AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_3.absolute_y.h, base_data.finger_3.absolute_y.l),
+            AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_3.touch_strength.h, base_data.finger_3.touch_strength.l),
         },
         {
             AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_4.absolute_x.h, base_data.finger_4.absolute_x.l),
             AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_4.absolute_y.h, base_data.finger_4.absolute_y.l),
+            AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_4.touch_strength.h, base_data.finger_4.touch_strength.l),
         },
         {
             AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_5.absolute_x.h, base_data.finger_5.absolute_x.l),
             AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_5.absolute_y.h, base_data.finger_5.absolute_y.l),
+            AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(base_data.finger_5.touch_strength.h, base_data.finger_5.touch_strength.l),
         },
     };
 
     position_t deltas[5] = {0};
+    bool first_touch = true;
     for (int i = 0; i < 5; i++) {
-        if (i >= base_data.number_of_fingers) {
+        if (fingers[i].strength == 0 ) {
             fingers[i].x = -1;
             fingers[i].y = -1;
             prev_positions[i].x = -1;
@@ -374,11 +380,8 @@ void get_finger_delta(azoteq_iqs5xx_base_data_t base_data, position_t *delta) {
             continue;
         }
 
-        if (i == 0 && prev_positions[i].x == -1) {
-            timer = timer_read();
-        }
-
         if (prev_positions[i].x != -1) {
+            first_touch = false;
             // カーソル飛び対策として、最大移動量を抑制
             int x = fingers[i].x - prev_positions[i].x;
             x = x > 300 ? 300 : x < -300 ? -300 : x;
@@ -393,7 +396,12 @@ void get_finger_delta(azoteq_iqs5xx_base_data_t base_data, position_t *delta) {
         prev_positions[i].y = fingers[i].y;
     }
 
-    if (timer_elapsed(timer) < 100) {
+    if (base_data.number_of_fingers > 0 && first_touch) {
+        timer = timer_read();
+        pd_dprintf("first touch");
+    }
+
+    if (timer_elapsed(timer) < WAIT_TIME_FOR_CURSOR_MOVEMENT) {
         delta->x = 0;
         delta->y = 0;
         return;
@@ -405,10 +413,10 @@ void get_finger_delta(azoteq_iqs5xx_base_data_t base_data, position_t *delta) {
         return;
     }
 
-    for (int i = 0; i < base_data.number_of_fingers; i++) {
+    for (int i = 0; i < 5; i++) {
         if (abs(deltas[i].x) + abs(deltas[i].y) > 2) {
             delta->x = deltas[i].x;
-            delta->x = deltas[i].y;
+            delta->y = deltas[i].y;
             cursor_finger_num = i;
             return;
         }
@@ -487,7 +495,7 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
                 read_error_count++;
             }
             temp_report.buttons = previous_button_state;
-            pd_dprintf("IQS5XX - get report failed: %d \n", status);
+            // pd_dprintf("IQS5XX - get report failed: %d \n", status);
         }
     } else {
         pd_dprintf("IQS5XX - Init failed: %d \n", azoteq_iqs5xx_init_status);

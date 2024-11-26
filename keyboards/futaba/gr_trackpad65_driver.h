@@ -20,6 +20,13 @@ typedef struct {
 } position_t;
 
 typedef struct {
+    int x;
+    int y;
+    int strength;
+} position_with_strength_t;
+
+
+typedef struct {
     position_t pos;
     position_t prev_pos;
     mouse_xy_report_t mouse_report_x;
@@ -67,6 +74,8 @@ const static uint16_t FUTABA_RETAP_WAITING_TIME = 200;
 const static uint16_t FUTABA_TAP_STRENGTH_THRESHOLD = 850;
 // 弱いタッチでもクリックにする時間の最大値
 const static uint16_t FUTABA_MAX_TAP_TIME = 200;
+
+const static int WAIT_TIME_FOR_CURSOR_MOVEMENT = 100;
 
 #define SCROLL_SCALE_PERCENT 10
 
