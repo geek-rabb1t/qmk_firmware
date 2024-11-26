@@ -79,14 +79,6 @@ void dispatch_swipe_gesture(int16_t swipe_distance_x, int16_t swipe_distance_y, 
     trackpad_event.num_of_fingers = num_of_fingers;
 }
 
-void dispatch_multi_tap(int8_t num_of_fingers) {
-
-    pd_dprintf("tap - %d fingers.\n",num_of_fingers);
-
-    trackpad_event.type = trackpad_event_tap;
-    trackpad_event.num_of_fingers = num_of_fingers;
-}
-
 void reset_trackpad_event(void) {
     trackpad_event.type = trackpad_event_none;
     trackpad_event.num_of_fingers = 0;
@@ -118,50 +110,55 @@ void reset_gesture_status(void) {
 }
 
 
-report_mouse_t idle_strategy(trackpad_base_data_t trackpad_data) {
+report_mouse_t idle_strategy(trackpad_base_data_t *trackpad_data) {
     reset_gesture_status();
     report_mouse_t report = {0};
     return report;
 }
 
-report_mouse_t touch_strategy(trackpad_base_data_t trackpad_data) {
+report_mouse_t touch_strategy(trackpad_base_data_t *trackpad_data) {
     report_mouse_t temp_report = {0};
     return temp_report;
 }
 
-report_mouse_t move_strategy(trackpad_base_data_t trackpad_data) {
+report_mouse_t move_strategy(trackpad_base_data_t *trackpad_data) {
     // pd_dprintf("move: %d fingers.\n",trackpad_data.num_of_fingers);
     report_mouse_t temp_report = {0};
-    if (trackpad_data.num_of_fingers  >= 2) {
+    if (trackpad_data->num_of_fingers  >= 2) {
 
         int scroll_dir_x = (FUTABA_REVERSE_SCROLL_X) ? -1 : 1;
         int scroll_dir_y = (FUTABA_REVERSE_SCROLL_Y) ? -1 : 1;
 
-        int scroll_x = trackpad_data.x * SCROLL_SCALE_PERCENT / 100 * scroll_dir_x;
-        int scroll_y = trackpad_data.y * SCROLL_SCALE_PERCENT / 100 * scroll_dir_y;
+        int scroll_x = trackpad_data->pos.x * SCROLL_SCALE_PERCENT / 100 * scroll_dir_x;
+        int scroll_y = trackpad_data->pos.y * SCROLL_SCALE_PERCENT / 100 * scroll_dir_y;
 
-        temp_report.h = CONSTRAIN_HID(scroll_x);
-        temp_report.v = CONSTRAIN_HID(scroll_y);
-
+        if (abs(trackpad_data->pos.y + trackpad_data->prev_pos.y) > abs(trackpad_data->pos.x + trackpad_data->prev_pos.x) * 2) {
+            temp_report.v = CONSTRAIN_HID(scroll_y);
+        } else if (abs(trackpad_data->pos.x  + trackpad_data->prev_pos.x) > abs(trackpad_data->pos.y  + trackpad_data->prev_pos.y) *2) {
+            temp_report.h = CONSTRAIN_HID(scroll_x);
+        } else {
+            temp_report.h = CONSTRAIN_HID(scroll_x);
+            temp_report.v = CONSTRAIN_HID(scroll_y);
+        }
 
     } else {
-        temp_report.x = trackpad_data.mouse_report_x;
-        temp_report.y = trackpad_data.mouse_report_y;
+        temp_report.x = trackpad_data->mouse_report_x;
+        temp_report.y = trackpad_data->mouse_report_y;
     }
 
     return temp_report;
 }
 
-report_mouse_t gesture_strategy(trackpad_base_data_t trackpad_data) {
+report_mouse_t gesture_strategy(trackpad_base_data_t *trackpad_data) {
     report_mouse_t temp_report = {0};
 
-    swipe_distance_x += trackpad_data.x;
-    swipe_distance_y += trackpad_data.y;
+    swipe_distance_x += trackpad_data->pos.x;
+    swipe_distance_y += trackpad_data->pos.y;
 
     return temp_report;
 }
 
-report_mouse_t gesture_fire_strategy(trackpad_base_data_t trackpad_data) {
+report_mouse_t gesture_fire_strategy(trackpad_base_data_t *trackpad_data) {
     report_mouse_t temp_report = {0};
 
     pd_dprintf("gesture: %d fingers.(%d, %d)\n",max_fingers, swipe_distance_x, swipe_distance_y);
@@ -177,24 +174,24 @@ pointing_device_buttons_t dispatch_buttons(int num_of_fingers) {
                                     POINTING_DEVICE_BUTTON1);
 }
 
-report_mouse_t press_strategy(trackpad_base_data_t trackpad_data) {
+report_mouse_t press_strategy(trackpad_base_data_t *trackpad_data) {
     report_mouse_t temp_report = {0};
 
     pointing_device_buttons_t button = dispatch_buttons(max_fingers);
     // pd_dprintf("press: %d fingers.\n",max_fingers);
     temp_report.buttons = pointing_device_handle_buttons(temp_report.buttons, true, button);
 
-    if (trackpad_data.mouse_report_x != 0 || trackpad_data.mouse_report_y != 0) {
+    if (trackpad_data->mouse_report_x != 0 || trackpad_data->mouse_report_y != 0) {
         doubleTap = false;
     }
 
-    temp_report.x = trackpad_data.mouse_report_x;
-    temp_report.y = trackpad_data.mouse_report_y;
+    temp_report.x = trackpad_data->mouse_report_x;
+    temp_report.y = trackpad_data->mouse_report_y;
 
     return temp_report;
 }
 
-report_mouse_t wait_strategy(trackpad_base_data_t trackpad_data) {
+report_mouse_t wait_strategy(trackpad_base_data_t *trackpad_data) {
     report_mouse_t temp_report = {0};
 
     if (doubleTap) {
@@ -208,7 +205,7 @@ report_mouse_t wait_strategy(trackpad_base_data_t trackpad_data) {
     return temp_report;
 }
 
-report_mouse_t (*find_strategy(trackpad_state_t state))(trackpad_base_data_t) {
+report_mouse_t (*find_strategy(trackpad_state_t state))(trackpad_base_data_t *) {
     switch (state) {
         case trackpad_state_idle: return idle_strategy;
         case trackpad_state_touch: return touch_strategy;
@@ -222,17 +219,17 @@ report_mouse_t (*find_strategy(trackpad_state_t state))(trackpad_base_data_t) {
 }
 
 
-touch_state_t get_touch_state(trackpad_base_data_t trackpad_data) {
-    if (trackpad_data.touch_strength == 0) {
+touch_state_t get_touch_state(trackpad_base_data_t *trackpad_data) {
+    if (trackpad_data->touch_strength == 0) {
         return touch_state_none;
-    } else if (trackpad_data.touch_strength >= FUTABA_TAP_STRENGTH_THRESHOLD) {
+    } else if (trackpad_data->touch_strength >= FUTABA_TAP_STRENGTH_THRESHOLD) {
         return touch_state_press;
     }
     return touch_state_touch;
 
 }
 
-trackpad_state_t update_current_state(trackpad_base_data_t trackpad_data, trackpad_state_t prev_state) {
+trackpad_state_t update_current_state(trackpad_base_data_t *trackpad_data, trackpad_state_t prev_state) {
     touch_state_t touch_state = get_touch_state(trackpad_data);
     // pd_dprintf("touch: %d.\n",touch_state);
 
@@ -240,17 +237,17 @@ trackpad_state_t update_current_state(trackpad_base_data_t trackpad_data, trackp
     if (prev_state == trackpad_state_idle) {
         if (touch_state == touch_state_touch) {
             tap_timer = timer_read();
-            max_fingers = calc_max_fingers(trackpad_data.num_of_fingers, max_fingers);
+            max_fingers = calc_max_fingers(trackpad_data->num_of_fingers, max_fingers);
             return trackpad_state_touch;
         }
         if (touch_state == touch_state_press) {
-            max_fingers = calc_max_fingers(trackpad_data.num_of_fingers, max_fingers);
+            max_fingers = calc_max_fingers(trackpad_data->num_of_fingers, max_fingers);
             return trackpad_state_press;
         }
     }
 
     if (prev_state == trackpad_state_touch) {
-        max_fingers = calc_max_fingers(trackpad_data.num_of_fingers, max_fingers);
+        max_fingers = calc_max_fingers(trackpad_data->num_of_fingers, max_fingers);
         if (touch_state == touch_state_none) {
             if (timer_elapsed(tap_timer) <= FUTABA_MAX_TAP_TIME) {
                 return trackpad_state_press;
@@ -258,7 +255,7 @@ trackpad_state_t update_current_state(trackpad_base_data_t trackpad_data, trackp
             return trackpad_state_idle;
         }
 
-        if (trackpad_data.mouse_report_x != 0 || trackpad_data.mouse_report_y != 0) {
+        if (trackpad_data->mouse_report_x != 0 || trackpad_data->mouse_report_y != 0) {
             if (max_fingers > 2) {
                 return trackpad_state_gesture;
             }
@@ -267,7 +264,7 @@ trackpad_state_t update_current_state(trackpad_base_data_t trackpad_data, trackp
 
         if (touch_state == touch_state_press) {
             if (timer_elapsed(tap_timer) <= FUTABA_MAX_TAP_TIME) {
-                pd_dprintf("touch to press!!:%d, timer:%d\n", trackpad_data.touch_strength, timer_elapsed(tap_timer));
+                pd_dprintf("touch to press!!:%d, timer:%d\n", trackpad_data->touch_strength, timer_elapsed(tap_timer));
                 return trackpad_state_press;
             }
         }
@@ -293,7 +290,7 @@ trackpad_state_t update_current_state(trackpad_base_data_t trackpad_data, trackp
             return trackpad_state_touch;
         }
         if (touch_state == touch_state_press) {
-            max_fingers = calc_max_fingers(trackpad_data.num_of_fingers, max_fingers);
+            max_fingers = calc_max_fingers(trackpad_data->num_of_fingers, max_fingers);
             return trackpad_state_press;
         }
     }
@@ -338,10 +335,6 @@ int get_touch_strength(azoteq_iqs5xx_base_data_t base_data) {
     return max;
 }
 
-typedef struct {
-    int x;
-    int y;
-} position_t;
 
 static position_t prev_positions[5] = {{-1, -1}, {-1, -1}, {-1, -1}, {-1, -1}, {-1, -1}};
 static int cursor_finger_num = 0;
@@ -438,8 +431,7 @@ mouse_xy_report_t correct_cursor(int delta, int prev, bool print) {
     return (mouse_xy_report_t) CONSTRAIN_HID_XY((int)mov);
 }
 
-static int prev_x = 0;
-static int prev_y = 0;
+static position_t prev = {0};
 
 report_mouse_t pointing_device_generate_report(azoteq_iqs5xx_base_data_t base_data) {
 
@@ -455,20 +447,21 @@ report_mouse_t pointing_device_generate_report(azoteq_iqs5xx_base_data_t base_da
 
 
     trackpad_base_data_t trackpad_data = {
-        .x              = position.x,
-        .y              = position.y,
-        .mouse_report_x = correct_cursor(position.x, prev_x, true),
-        .mouse_report_y = correct_cursor(position.y, prev_y, false),
+        .pos.x = position.x,
+        .pos.y = position.y,
+        .prev_pos.x = prev.x,
+        .prev_pos.y = prev.y,
+        .mouse_report_x = correct_cursor(position.x, prev.x, true),
+        .mouse_report_y = correct_cursor(position.y, prev.y, false),
         .touch_strength = get_touch_strength(base_data),
         .num_of_fingers = base_data.number_of_fingers,
     };
 
-    prev_x = position.x;
-    prev_y = position.y;
+    prev.x = position.x;
+    prev.y = position.y;
 
-    trackpad_state = update_current_state(trackpad_data, trackpad_state);
-    // pd_dprintf("state: %d.\n",trackpad_state);
-    return find_strategy(trackpad_state)(trackpad_data);
+    trackpad_state = update_current_state(&trackpad_data, trackpad_state);
+    return find_strategy(trackpad_state)(&trackpad_data);
 }
 
 
@@ -494,11 +487,10 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
                 read_error_count++;
             }
             temp_report.buttons = previous_button_state;
-            // pd_dprintf("IQS5XX - get report failed: %d \n", status);
+            pd_dprintf("IQS5XX - get report failed: %d \n", status);
         }
     } else {
         pd_dprintf("IQS5XX - Init failed: %d \n", azoteq_iqs5xx_init_status);
-        azoteq_iqs5xx_get_product();
     }
 
     return temp_report;

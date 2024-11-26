@@ -17,6 +17,11 @@
 typedef struct {
     int x;
     int y;
+} position_t;
+
+typedef struct {
+    position_t pos;
+    position_t prev_pos;
     mouse_xy_report_t mouse_report_x;
     mouse_xy_report_t mouse_report_y;
     int touch_strength;
