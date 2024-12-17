@@ -93,6 +93,7 @@ static int16_t swipe_distance_x = 0;
 static int16_t swipe_distance_y = 0;
 static uint16_t tap_interval = 0;
 static uint16_t tap_timer = 0;
+static uint16_t gesture_timer = 0;
 static bool doubleTap = false;
 
 static trackpad_state_t trackpad_state = trackpad_state_idle;
@@ -295,6 +296,7 @@ trackpad_state_t update_current_state(trackpad_base_data_t *trackpad_data, track
         if (trackpad_data->mouse_report_x != 0 || trackpad_data->mouse_report_y != 0) {
             if (max_fingers > 2) {
                 // pd_dprintf("start gesture: %d fingers.(x,y): (%d, %d)\n",max_fingers,trackpad_data->mouse_report_x, trackpad_data->mouse_report_y);
+                gesture_timer = timer_read();
                 return trackpad_state_gesture;
             }
             return trackpad_state_move;
@@ -316,7 +318,10 @@ trackpad_state_t update_current_state(trackpad_base_data_t *trackpad_data, track
 
     if (prev_state == trackpad_state_gesture) {
         if (touch_state == touch_state_none) {
-            return trackpad_state_gesture_fire;
+            if (timer_elapsed(gesture_timer) <= FUTABA_MAX_GESTURE_ACTIVE_TIME) {
+                return trackpad_state_gesture_fire;
+            }
+            return trackpad_state_idle;
         }
     }
 
