@@ -73,7 +73,7 @@ void dispatch_swipe_gesture(int16_t swipe_distance_x, int16_t swipe_distance_y, 
             (swipe_distance_x > 0 ? trackpad_event_swipe_right : trackpad_event_swipe_left):
             (swipe_distance_y > 0 ? trackpad_event_swipe_down : trackpad_event_swipe_up);
 
-    pd_dprintf("swipe - %d fingers, direction: %d, x:%d, y:%d.\n",num_of_fingers, event, swipe_distance_x, swipe_distance_y);
+    // pd_dprintf("swipe - %d fingers, direction: %d, x:%d, y:%d.\n",num_of_fingers, event, swipe_distance_x, swipe_distance_y);
 
     trackpad_event.type = event;
     trackpad_event.num_of_fingers = num_of_fingers;
@@ -197,7 +197,7 @@ report_mouse_t gesture_strategy(trackpad_base_data_t *trackpad_data) {
 report_mouse_t gesture_fire_strategy(trackpad_base_data_t *trackpad_data) {
     report_mouse_t temp_report = {0};
 
-    pd_dprintf("gesture: %d fingers.(%d, %d)\n",max_fingers, swipe_distance_x, swipe_distance_y);
+    // pd_dprintf("gesture: %d fingers.(%d, %d)\n",max_fingers, swipe_distance_x, swipe_distance_y);
     dispatch_swipe_gesture(swipe_distance_x, swipe_distance_y, max_fingers);
 
     return temp_report;
@@ -286,6 +286,7 @@ trackpad_state_t update_current_state(trackpad_base_data_t *trackpad_data, track
         max_fingers = calc_max_fingers(trackpad_data->num_of_fingers, max_fingers);
         if (touch_state == touch_state_none) {
             if (timer_elapsed(tap_timer) <= FUTABA_MAX_TAP_TIME) {
+                // pd_dprintf("touch : %d fingers.time: (%d)\n",max_fingers, timer_elapsed(tap_timer));
                 return trackpad_state_press;
             }
             return trackpad_state_idle;
@@ -293,6 +294,7 @@ trackpad_state_t update_current_state(trackpad_base_data_t *trackpad_data, track
 
         if (trackpad_data->mouse_report_x != 0 || trackpad_data->mouse_report_y != 0) {
             if (max_fingers > 2) {
+                // pd_dprintf("start gesture: %d fingers.(x,y): (%d, %d)\n",max_fingers,trackpad_data->mouse_report_x, trackpad_data->mouse_report_y);
                 return trackpad_state_gesture;
             }
             return trackpad_state_move;
@@ -300,6 +302,7 @@ trackpad_state_t update_current_state(trackpad_base_data_t *trackpad_data, track
 
         if (touch_state == touch_state_press) {
             if (timer_elapsed(tap_timer) <= FUTABA_MAX_TAP_TIME) {
+                // pd_dprintf("strong touch : %d fingers.time: (%d)\n",max_fingers, timer_elapsed(tap_timer));
                 return trackpad_state_press;
             }
         }
@@ -435,22 +438,30 @@ void get_finger_delta(azoteq_iqs5xx_base_data_t base_data, position_t *delta) {
         timer = timer_read();
     }
 
-    if (timer_elapsed(timer) < WAIT_TIME_FOR_CURSOR_MOVEMENT) {
+    if (base_data.number_of_fingers == 1 && timer_elapsed(timer) < WAIT_TIME_FOR_CURSOR_MOVEMENT) {
         delta->x = 0;
         delta->y = 0;
         return;
     }
 
-    if (abs(deltas[cursor_finger_num].x) + abs(deltas[cursor_finger_num].y) > 2) {
+    if (base_data.number_of_fingers >= 2 && timer_elapsed(timer) < WAIT_TIME_FOR_MULTI_TAP_CURSOR_MOVEMENT) {
+        delta->x = 0;
+        delta->y = 0;
+        return;
+    }
+
+    // 前回のサイクルでカーソル移動に使った指を優先する。
+    if (cursor_finger_num != -1 && (abs(deltas[cursor_finger_num].x) + abs(deltas[cursor_finger_num].y) > 2)) {
         delta->x = deltas[cursor_finger_num].x;
         delta->y = deltas[cursor_finger_num].y;
         return;
     }
 
+    // カーソル飛び対策として、指が変わった直後は移動量を無視する。
     for (int i = 0; i < 5; i++) {
         if (abs(deltas[i].x) + abs(deltas[i].y) > 2) {
-            delta->x = deltas[i].x;
-            delta->y = deltas[i].y;
+            delta->x = 0;
+            delta->y = 0;
             cursor_finger_num = i;
             return;
         }
@@ -458,7 +469,7 @@ void get_finger_delta(azoteq_iqs5xx_base_data_t base_data, position_t *delta) {
 
     delta->x = 0;
     delta->y = 0;
-    cursor_finger_num = 0;
+    cursor_finger_num = -1;
 
     return;
 }
