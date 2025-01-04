@@ -3,11 +3,15 @@
 
 #include QMK_KEYBOARD_H
 #include <print.h>
-
+#include "gr_trackpad65_driver.h"
 
 enum my_keycodes {
-  HIGH_SPEED = SAFE_RANGE,
-  LOW_SPEED
+  HIGH_SPEED = QK_KB_0,
+  LOW_SPEED,
+  TGL_V_SCL,
+  TGL_H_SCL,
+  EN_3_TAP,
+  DIS_3_TAP,
 };
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -31,7 +35,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
 
     [1] = LAYOUT(
-        _______, _______, _______, _______, _______, _______, _______, _______, _______, KC_HOME, KC_PGDN, KC_PGUP, KC_END , _______, _______,
+        DF(3)  , _______, _______, _______, _______, _______, _______, _______, _______, KC_HOME, KC_PGDN, KC_PGUP, KC_END , _______, _______,
         _______, _______, _______, _______, _______, _______,                            KC_LEFT, KC_DOWN, KC_UP  , KC_RGHT, _______, _______,
         _______, _______, _______, _______, _______, _______,                            KC_LCBR, KC_RCBR, KC_LBRC, KC_RBRC, _______, _______,
                  _______, _______, _______, _______, _______,          _______,          _______, KC_BSPC, _______, _______, _______
@@ -43,13 +47,21 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_F11 , KC_F1  , KC_F2  , KC_F3  , KC_F4  , KC_F5  ,                            KC_F6  , KC_F7  , KC_F8  , KC_F9  , KC_F10 , KC_F12 ,
                  _______, _______, _______, _______, _______,          KC_KB_MUTE,       _______, _______, _______, _______, _______
                , _______, _______, _______, _______, _______, _______, _______, _______, _______, _______
+    ),
+    [3] = LAYOUT(
+        _______, _______, _______, EN_3_TAP , _______, _______, TGL_V_SCL, _______, TGL_H_SCL, _______, _______, _______, _______, _______, _______,
+        _______, _______, _______, DIS_3_TAP, _______, _______,                                _______, _______, _______, _______, _______, _______ ,
+        _______, _______, _______, _______  , _______, _______,                                _______, _______, _______, _______, _______, _______ ,
+                 _______, _______, _______  , _______, _______,            DF(0)  ,            _______, _______, _______, _______, _______
+               , _______, _______, _______  , _______, _______, _______  , _______, _______  , _______, _______
     )
 };
 
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][2] = {
     [0] =   { ENCODER_CCW_CW(KC_UP, KC_DOWN) },
     [1] =   { ENCODER_CCW_CW(KC_LEFT, KC_RGHT) },
-    [2] =   { ENCODER_CCW_CW(KC_KB_VOLUME_UP, KC_KB_VOLUME_DOWN) }
+    [2] =   { ENCODER_CCW_CW(KC_KB_VOLUME_UP, KC_KB_VOLUME_DOWN) },
+    [3] =   { ENCODER_CCW_CW(KC_UP, KC_DOWN) }
 };
 
 void keyboard_post_init_user(void) {
@@ -65,6 +77,7 @@ typedef enum  {
     SPEED_MODE_NORMAL,
     SPEED_MODE_HIGH
 } speed_mode_t;
+
 static speed_mode_t speed_mode = SPEED_MODE_NORMAL;
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -84,6 +97,35 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         speed_mode = SPEED_MODE_NORMAL;
       }
       return true;
+
+    case TGL_V_SCL:
+      if (record->event.pressed) {
+        trackpad_config.reverse_vertical_scroll = !trackpad_config.reverse_vertical_scroll;
+        update_trackpad_config(trackpad_config);
+      }
+      return false;
+
+    case TGL_H_SCL:
+      if (record->event.pressed) {
+        trackpad_config.reverse_horizontal_scroll = !trackpad_config.reverse_horizontal_scroll;
+        update_trackpad_config(trackpad_config);
+      }
+      return false;
+
+    case EN_3_TAP:
+      if (record->event.pressed) {
+        trackpad_config.disable_3fingers_tap = false;
+        update_trackpad_config(trackpad_config);
+      }
+      return false;
+
+    case DIS_3_TAP:
+      if (record->event.pressed) {
+        trackpad_config.disable_3fingers_tap = true;
+        update_trackpad_config(trackpad_config);
+      }
+      return false;
+
     default:
       return true;
   }

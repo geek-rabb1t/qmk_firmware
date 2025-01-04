@@ -32,9 +32,27 @@
 #define CONSTRAIN_HID_XY(amt) ((amt) < XY_REPORT_MIN ? XY_REPORT_MIN : ((amt) > XY_REPORT_MAX ? XY_REPORT_MAX : (amt)))
 
 
-static uint16_t cpi;
+trackpad_config_t trackpad_config = {
+    .reverse_vertical_scroll = false,
+    .reverse_horizontal_scroll = false,
+    .disable_3fingers_tap =false
+};
 
 
+void read_trackpad_config(void) {
+    uint32_t data = eeconfig_read_kb();
+    trackpad_config.reverse_vertical_scroll = (data & REVERSE_VERTICAL_SCROLL_MASK) > 0;
+    trackpad_config.reverse_horizontal_scroll = (data & REVERSE_HORIZONTAL_SCROLL_MASK) > 0;
+    trackpad_config.disable_3fingers_tap = (data & REVERSE_DISABLE_3FINGERS_MASK) > 0;
+}
+
+void update_trackpad_config(trackpad_config_t config) {
+    uint32_t data = 0;
+    data += trackpad_config.reverse_vertical_scroll ? REVERSE_VERTICAL_SCROLL_MASK : 0;
+    data += trackpad_config.reverse_horizontal_scroll ? REVERSE_HORIZONTAL_SCROLL_MASK : 0;
+    data += trackpad_config.disable_3fingers_tap ? REVERSE_DISABLE_3FINGERS_MASK : 0;
+    eeconfig_update_kb(data);
+}
 
 trackpad_event_t trackpad_event = {
     .type = trackpad_event_none,
@@ -57,7 +75,7 @@ void pointing_device_driver_init(void) {
         azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_xy_config(false, false, false, true, false);
         azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_gesture_config(true);
         wait_ms(AZOTEQ_IQS5XX_REPORT_RATE + 1);
-        cpi = azoteq_iqs5xx_get_cpi();
+        read_trackpad_config();
     }
 };
 
@@ -131,8 +149,8 @@ report_mouse_t move_strategy(trackpad_base_data_t *trackpad_data) {
     report_mouse_t temp_report = {0};
     if (trackpad_data->num_of_fingers  >= 2) {
 
-        int scroll_dir_x = (FUTABA_REVERSE_SCROLL_X) ? -1 : 1;
-        int scroll_dir_y = (FUTABA_REVERSE_SCROLL_Y) ? -1 : 1;
+        int scroll_dir_x = (trackpad_config.reverse_horizontal_scroll) ? -1 : 1;
+        int scroll_dir_y = (trackpad_config.reverse_vertical_scroll  ) ? -1 : 1;
 
         scroll_rest.x += trackpad_data->pos.x * SCROLL_SCALE_PERCENT;
         scroll_rest.y += trackpad_data->pos.y * SCROLL_SCALE_PERCENT;
@@ -204,19 +222,33 @@ report_mouse_t gesture_fire_strategy(trackpad_base_data_t *trackpad_data) {
     return temp_report;
 }
 
-pointing_device_buttons_t dispatch_buttons(int num_of_fingers) {
-    return
-        (num_of_fingers == 3) ?     POINTING_DEVICE_BUTTON3 :
-        ((num_of_fingers == 2) ?    POINTING_DEVICE_BUTTON2 :
-                                    POINTING_DEVICE_BUTTON1);
+dispatch_button_t dispatch_buttons(int num_of_fingers) {
+    dispatch_button_t temp = {
+        .is_pressed = false,
+        .button_num = POINTING_DEVICE_BUTTON1
+    };
+
+    if ( num_of_fingers > 3 ||
+        (num_of_fingers == 3 && trackpad_config.disable_3fingers_tap)) {
+        temp.is_pressed = false;
+        return temp;
+    }
+    temp.is_pressed = true;
+    temp.button_num =    (num_of_fingers == 3) ?    POINTING_DEVICE_BUTTON3 :
+                        ((num_of_fingers == 2) ?    POINTING_DEVICE_BUTTON2 :
+                                                    POINTING_DEVICE_BUTTON1);
+    return temp;
 }
 
 report_mouse_t press_strategy(trackpad_base_data_t *trackpad_data) {
     report_mouse_t temp_report = {0};
 
-    pointing_device_buttons_t button = dispatch_buttons(max_fingers);
+    dispatch_button_t button = dispatch_buttons(max_fingers);
+    if (!button.is_pressed) {
+        return temp_report;
+    }
     // pd_dprintf("press: %d fingers.\n",max_fingers);
-    temp_report.buttons = pointing_device_handle_buttons(temp_report.buttons, true, button);
+    temp_report.buttons = pointing_device_handle_buttons(temp_report.buttons, true, button.button_num);
 
     if (trackpad_data->mouse_report_x != 0 || trackpad_data->mouse_report_y != 0) {
         doubleTap = false;
@@ -235,9 +267,12 @@ report_mouse_t wait_strategy(trackpad_base_data_t *trackpad_data) {
         doubleTap = false;
         return temp_report;
     }
-    pointing_device_buttons_t button = dispatch_buttons(max_fingers);
+    dispatch_button_t button = dispatch_buttons(max_fingers);
+    if (!button.is_pressed) {
+        return temp_report;
+    }
     // pd_dprintf("press wait: %d fingers.\n",max_fingers);
-    temp_report.buttons = pointing_device_handle_buttons(temp_report.buttons, true, button);
+    temp_report.buttons = pointing_device_handle_buttons(temp_report.buttons, true, button.button_num);
 
     return temp_report;
 }

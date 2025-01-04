@@ -68,11 +68,28 @@ typedef enum  {
 } trackpad_gesture_event_t;
 
 typedef struct {
+    bool is_pressed;
+    pointing_device_buttons_t button_num;
+} dispatch_button_t;
+
+typedef struct {
     trackpad_gesture_event_t type;
     int8_t num_of_fingers;
 } trackpad_event_t;
 
 extern trackpad_event_t trackpad_event;
+
+typedef struct {
+    bool    reverse_vertical_scroll;
+    bool    reverse_horizontal_scroll;
+    bool    disable_3fingers_tap;
+} trackpad_config_t;
+
+#define REVERSE_VERTICAL_SCROLL_MASK   0b0000000000000001
+#define REVERSE_HORIZONTAL_SCROLL_MASK 0b0000000000000010
+#define REVERSE_DISABLE_3FINGERS_MASK  0b0000000000000100
+
+extern trackpad_config_t trackpad_config;
 
 const static int8_t FUTABA_SWIPE_THRESHOLD_PIXEL = 20;
 const static uint16_t FUTABA_MAX_GESTURE_ACTIVE_TIME = 1000;
@@ -87,7 +104,6 @@ const static int WAIT_TIME_FOR_MULTI_TAP_CURSOR_MOVEMENT = 200;
 
 #define SCROLL_SCALE_PERCENT 5
 
-#define FUTABA_REVERSE_SCROLL_X false
-#define FUTABA_REVERSE_SCROLL_Y true
-
 void reset_trackpad_event(void);
+
+void update_trackpad_config(trackpad_config_t config);
